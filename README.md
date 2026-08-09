@@ -35,8 +35,8 @@ A sleek, production-ready Full-Stack URL Shortener with real-time click tracking
 
 ### 1. Clone & Install
 ```bash
-git clone https://github.com/techprem324/url_shortner-2.0.git
-cd url_shortner-2.0
+git clone https://github.com/techprem324/url_shortner_2.0.git
+cd url_shortner_2.0
 npm install
 ```
 
