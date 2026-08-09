@@ -1,11 +1,346 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hashing Table</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickLink | Enterprise URL Shortener & Analytics</title>
+  
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- QR Code Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <!-- Production CSS -->
+  <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <h1>Hashing Table form the user</h1>
+  <!-- Ambient background subtle gradient mesh -->
+  <div class="ambient-glow"></div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Navigation Bar -->
+  <nav class="nav-bar">
+    <div class="nav-inner">
+      <a href="/" class="brand">
+        <span class="brand-badge"><i class="fa-solid fa-bolt-lightning"></i></span>
+        <span class="brand-title">QuickLink<span class="brand-dot">.</span></span>
+      </a>
+
+      <div class="nav-right">
+        <!-- DB Status -->
+        <% if (typeof isDbConnected !== 'undefined' && isDbConnected) { %>
+          <div class="db-status status-connected" title="Connected to MongoDB Atlas">
+            <span class="dot"></span> MongoDB Online
+          </div>
+        <% } else { %>
+          <div class="db-status status-offline" title="Connecting to MongoDB...">
+            <span class="dot-amber"></span> Database Connecting
+          </div>
+        <% } %>
+
+        <div class="nav-divider"></div>
+
+        <!-- User State -->
+        <% if (typeof user !== 'undefined' && user) { %>
+          <div class="user-profile-menu">
+            <div class="user-badge" id="user-menu-btn">
+              <div class="user-avatar"><%= user.name.charAt(0).toUpperCase() %></div>
+              <span class="user-name"><%= user.name %></span>
+            </div>
+            <a href="/user/logout" class="btn btn-sm btn-ghost" title="Sign out">
+              <i class="fa-solid fa-arrow-right-from-bracket"></i> Logout
+            </a>
+          </div>
+        <% } else { %>
+          <div class="nav-auth-buttons">
+            <a href="/login" class="btn btn-sm btn-ghost">Sign In</a>
+            <a href="/signup" class="btn btn-sm btn-primary-solid">Get Started</a>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-container">
+    <!-- Hero Section -->
+    <header class="hero-header">
+      <div class="hero-pill">
+        <span class="pill-sparkle"><i class="fa-solid fa-link"></i></span>
+        <span>High-Performance Link Shortening</span>
+      </div>
+      <h1 class="hero-heading">Shorten links with <span class="highlight-text">precision</span> and analytics.</h1>
+      <p class="hero-description">Generate short, memorable URLs, prevent duplicates, and monitor real-time click engagement in one clean dashboard.</p>
+    </header>
+
+    <!-- Shortener Card Component -->
+    <section class="shortener-card">
+      <form id="shorten-form" action="/url" method="POST" class="shortener-form">
+        <div class="input-row">
+          <div class="input-field-group">
+            <span class="field-icon"><i class="fa-solid fa-globe"></i></span>
+            <input 
+              type="text" 
+              id="url-input" 
+              name="url" 
+              placeholder="Paste any link (e.g. google.com, youtube.com/watch?v=...)" 
+              autocomplete="off"
+              required
+            />
+            <button type="button" id="paste-btn" class="field-action-btn" title="Paste from clipboard">
+              <i class="fa-regular fa-paste"></i>
+            </button>
+          </div>
+
+          <button type="submit" id="shorten-btn" class="btn btn-primary-solid btn-shorten">
+            <span class="btn-text"><i class="fa-solid fa-bolt"></i> Shorten URL</span>
+            <span class="btn-spinner hidden"><i class="fa-solid fa-circle-notch fa-spin"></i> Shortening...</span>
+          </button>
+        </div>
+
+        <!-- Optional Custom Alias Toggle -->
+        <div class="alias-toggle-row">
+          <button type="button" id="toggle-alias-btn" class="alias-toggle-link">
+            <i class="fa-solid fa-sliders"></i> <span id="alias-toggle-text">Add custom alias (optional)</span>
+          </button>
+
+          <div id="alias-input-wrapper" class="alias-input-wrapper hidden">
+            <span class="alias-prefix"><%= baseUrl %>/</span>
+            <input 
+              type="text" 
+              id="custom-alias-input" 
+              name="customAlias" 
+              placeholder="my-custom-slug" 
+              pattern="[a-zA-Z0-9_\-]{3,30}"
+              title="3-30 letters, numbers, hyphens, or underscores"
+            />
+          </div>
+        </div>
+      </form>
+
+      <!-- Instant Result Box -->
+      <div id="result-box" class="result-panel <%= id ? '' : 'hidden' %>">
+        <div class="result-top">
+          <div class="result-status">
+            <i class="fa-solid fa-circle-check"></i>
+            <span id="result-tag"><%= message || 'Short link generated successfully' %></span>
+          </div>
+        </div>
+
+        <div class="result-main">
+          <div class="result-url-wrapper">
+            <input 
+              type="text" 
+              id="result-short-url" 
+              readonly 
+              value="<%= shortUrl || (id ? baseUrl + '/' + id : '') %>" 
+            />
+            <button type="button" class="btn btn-copy" id="result-copy-btn">
+              <i class="fa-regular fa-copy"></i> <span>Copy</span>
+            </button>
+          </div>
+
+          <div class="result-actions">
+            <a 
+              href="<%= shortUrl || (id ? baseUrl + '/' + id : '#') %>" 
+              target="_blank" 
+              id="result-visit-btn" 
+              class="btn btn-sm btn-outline"
+            >
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Visit
+            </a>
+            <button type="button" id="result-qr-btn" class="btn btn-sm btn-outline">
+              <i class="fa-solid fa-qrcode"></i> QR Code
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Metrics Bar -->
+    <section class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Total Links</span>
+          <span class="metric-icon"><i class="fa-solid fa-link"></i></span>
+        </div>
+        <div class="metric-value" id="stat-total-links"><%= (stats && (stats.isUserView ? stats.userLinks : stats.totalLinks)) || (urls ? urls.length : 0) %></div>
+        <div class="metric-subtext"><%= (stats && stats.isUserView) ? 'Shortened by your account' : 'Active shortened URLs' %></div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Total Clicks</span>
+          <span class="metric-icon"><i class="fa-solid fa-chart-simple"></i></span>
+        </div>
+        <div class="metric-value" id="stat-total-clicks"><%= (stats && stats.totalClicks) || 0 %></div>
+        <div class="metric-subtext">Redirects tracked in real time</div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-title">Security & Rate Limiting</span>
+          <span class="metric-icon"><i class="fa-solid fa-shield-check"></i></span>
+        </div>
+        <div class="metric-value">100%</div>
+        <div class="metric-subtext">DDoS & spam protection active</div>
+      </div>
+    </section>
+
+    <!-- Dashboard Table Section -->
+    <section class="dashboard-card">
+      <div class="dashboard-toolbar">
+        <div class="toolbar-left">
+          <h2 class="toolbar-title">Links Dashboard</h2>
+          <span class="toolbar-badge"><%= urls ? urls.length : 0 %> records</span>
+        </div>
+
+        <div class="toolbar-right">
+          <div class="search-field">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="table-search" placeholder="Search by link or ID..." />
+          </div>
+          <button id="refresh-table-btn" class="btn btn-sm btn-outline btn-refresh" title="Reload links">
+            <i class="fa-solid fa-rotate-right"></i> Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="data-table" id="urls-table">
+          <thead>
+            <tr>
+              <th style="width: 40px;">#</th>
+              <th>Destination URL</th>
+              <th>Short Link</th>
+              <th style="width: 100px;">Clicks</th>
+              <th style="width: 130px;">Created</th>
+              <th style="width: 120px; text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="url-table-body">
+            <% if (urls && urls.length > 0) { %>
+              <% urls.forEach((urlItem, index) => { %>
+                <% const fullShortUrl = baseUrl + '/' + urlItem.shortId; %>
+                <% const longUrl = urlItem.originalUrl || urlItem.redirectUrl || ''; %>
+                <% const clickCount = typeof urlItem.clicks === 'number' ? urlItem.clicks : (urlItem.visitHistory ? urlItem.visitHistory.length : 0); %>
+                <tr data-shortid="<%= urlItem.shortId %>" data-longurl="<%= longUrl.toLowerCase() %>">
+                  <td class="cell-index"><%= index + 1 %></td>
+                  <td class="cell-destination">
+                    <div class="destination-wrapper">
+                      <a href="<%= longUrl %>" target="_blank" rel="noopener noreferrer" class="destination-link" title="<%= longUrl %>">
+                        <%= longUrl %>
+                      </a>
+                    </div>
+                  </td>
+                  <td class="cell-short">
+                    <div class="short-pill">
+                      <a href="/<%= urlItem.shortId %>" target="_blank" class="short-href">
+                        /<%= urlItem.shortId %>
+                      </a>
+                      <button 
+                        class="btn-cell-copy copy-row-btn" 
+                        data-clipboard="<%= fullShortUrl %>" 
+                        title="Copy to clipboard"
+                      >
+                        <i class="fa-regular fa-copy"></i>
+                      </button>
+                    </div>
+                  </td>
+                  <td class="cell-clicks">
+                    <span class="click-chip">
+                      <i class="fa-solid fa-arrow-trend-up"></i> <%= clickCount %>
+                    </span>
+                  </td>
+                  <td class="cell-date">
+                    <%= urlItem.createdAt ? new Date(urlItem.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent' %>
+                  </td>
+                  <td class="cell-actions">
+                    <button 
+                      class="btn-action qr-row-btn" 
+                      data-url="<%= fullShortUrl %>" 
+                      data-id="<%= urlItem.shortId %>" 
+                      title="Show QR code"
+                    >
+                      <i class="fa-solid fa-qrcode"></i>
+                    </button>
+                    <a 
+                      href="/<%= urlItem.shortId %>" 
+                      target="_blank" 
+                      class="btn-action" 
+                      title="Open destination"
+                    >
+                      <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </a>
+                    <button 
+                      class="btn-action btn-action-delete delete-row-btn" 
+                      data-shortid="<%= urlItem.shortId %>" 
+                      title="Delete link"
+                    >
+                      <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr id="empty-state-row">
+                <td colspan="6" class="empty-state-cell">
+                  <div class="empty-state-wrap">
+                    <i class="fa-solid fa-link-slash"></i>
+                    <p class="empty-title">No shortened links yet</p>
+                    <p class="empty-subtitle">Paste a URL in the box above to generate your first link.</p>
+                  </div>
+                </td>
+              </tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- QR Code Modal -->
+  <div id="qr-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-top">
+        <h3 class="modal-heading"><i class="fa-solid fa-qrcode"></i> QR Code</h3>
+        <button id="close-qr-modal" class="modal-btn-close"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-content">
+        <div id="qrcode-container" class="qr-canvas-holder"></div>
+        <p id="qr-target-url" class="qr-url-caption"></p>
+      </div>
+      <div class="modal-actions">
+        <button id="download-qr-btn" class="btn btn-primary-solid btn-sm">
+          <i class="fa-solid fa-download"></i> Download PNG
+        </button>
+        <button id="close-qr-btn" class="btn btn-outline btn-sm">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer-bar">
+    <div class="footer-inner">
+      <div class="footer-left">
+        <span class="footer-brand">QuickLink.io</span>
+        <span class="footer-note">&copy; 2026 Production URL Shortener & Analytics</span>
+      </div>
+      <div class="footer-right">
+        <a href="/test" class="footer-link"><i class="fa-solid fa-terminal"></i> DB Diagnostics</a>
+        <a href="/signup" class="footer-link">Sign Up</a>
+        <a href="/login" class="footer-link">Sign In</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/js/main.js"></script>
 </body>
 </html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= (typeof tab !== 'undefined' && tab === 'signup') ? 'Create Account' : 'Sign In' %> | QuickLink</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="auth-page">
+  <!-- Minimal Ambient Glow -->
+  <div class="background-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <div class="auth-wrapper">
+    <!-- Brand Header -->
+    <div class="auth-top-nav">
+      <a href="/" class="brand-logo">
+        <span class="logo-icon"><i class="fa-solid fa-bolt-lightning"></i></span>
+        <span class="logo-text">QuickLink<span class="highlight">.io</span></span>
+      </a>
+      <a href="/" class="btn-back-link">
+        <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+      </a>
+    </div>
+
+    <!-- Auth Card -->
+    <div class="auth-card glass-panel">
+      <!-- Tab Switcher -->
+      <div class="auth-tabs">
+        <button 
+          type="button" 
+          id="tab-btn-login" 
+          class="auth-tab <%= (typeof tab === 'undefined' || tab !== 'signup') ? 'active' : '' %>"
+        >
+          Sign In
+        </button>
+        <button 
+          type="button" 
+          id="tab-btn-signup" 
+          class="auth-tab <%= (typeof tab !== 'undefined' && tab === 'signup') ? 'active' : '' %>"
+        >
+          Create Account
+        </button>
+      </div>
+
+      <!-- Error / Success Banners -->
+      <% if (typeof error !== 'undefined' && error) { %>
+        <div class="alert-banner alert-error">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span><%= error %></span>
+        </div>
+      <% } %>
+
+      <% if (typeof success !== 'undefined' && success) { %>
+        <div class="alert-banner alert-success">
+          <i class="fa-solid fa-circle-check"></i>
+          <span><%= success %></span>
+        </div>
+      <% } %>
+
+      <!-- SIGN IN FORM -->
+      <form 
+        id="login-form" 
+        action="/user/login" 
+        method="POST" 
+        class="auth-form-panel <%= (typeof tab !== 'undefined' && tab === 'signup') ? 'hidden' : '' %>"
+      >
+        <div class="auth-form-header">
+          <h2>Welcome back</h2>
+          <p>Enter your credentials to manage your shortened links.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="login-email"><i class="fa-regular fa-envelope"></i> Email address</label>
+          <input 
+            type="email" 
+            id="login-email" 
+            name="email" 
+            placeholder="name@company.com" 
+            value="<%= typeof email !== 'undefined' ? email : '' %>" 
+            required 
+            autocomplete="email"
+          />
+        </div>
+
+        <div class="form-group">
+          <div class="label-row">
+            <label for="login-password"><i class="fa-solid fa-lock"></i> Password</label>
+          </div>
+          <div class="password-wrapper">
+            <input 
+              type="password" 
+              id="login-password" 
+              name="password" 
+              placeholder="••••••••" 
+              required 
+              autocomplete="current-password"
+            />
+            <button type="button" class="btn-toggle-pwd" title="Toggle password visibility">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-auth" id="btn-login-submit">
+          <span class="btn-text">Sign In</span>
+          <span class="btn-spinner hidden"><i class="fa-solid fa-circle-notch fa-spin"></i> Signing in...</span>
+        </button>
+
+        <div class="auth-switch-prompt">
+          Don't have an account? <a href="#" id="switch-to-signup">Sign up for free</a>
+        </div>
+      </form>
+
+      <!-- SIGN UP FORM -->
+      <form 
+        id="signup-form" 
+        action="/user/signup" 
+        method="POST" 
+        class="auth-form-panel <%= (typeof tab !== 'undefined' && tab === 'signup') ? '' : 'hidden' %>"
+      >
+        <div class="auth-form-header">
+          <h2>Create an account</h2>
+          <p>Track link analytics and manage custom aliases.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="signup-name"><i class="fa-regular fa-user"></i> Full name</label>
+          <input 
+            type="text" 
+            id="signup-name" 
+            name="name" 
+            placeholder="Alex Rivers" 
+            value="<%= typeof name !== 'undefined' ? name : '' %>" 
+            required 
+            autocomplete="name"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="signup-email"><i class="fa-regular fa-envelope"></i> Work or personal email</label>
+          <input 
+            type="email" 
+            id="signup-email" 
+            name="email" 
+            placeholder="alex@example.com" 
+            value="<%= typeof email !== 'undefined' ? email : '' %>" 
+            required 
+            autocomplete="email"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="signup-password"><i class="fa-solid fa-lock"></i> Password</label>
+          <div class="password-wrapper">
+            <input 
+              type="password" 
+              id="signup-password" 
+              name="password" 
+              placeholder="Minimum 6 characters" 
+              minlength="6" 
+              required 
+              autocomplete="new-password"
+            />
+            <button type="button" class="btn-toggle-pwd" title="Toggle password visibility">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+          <span class="form-hint">Must contain at least 6 characters</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block btn-auth" id="btn-signup-submit">
+          <span class="btn-text">Create Free Account</span>
+          <span class="btn-spinner hidden"><i class="fa-solid fa-circle-notch fa-spin"></i> Creating...</span>
+        </button>
+
+        <div class="auth-switch-prompt">
+          Already have an account? <a href="#" id="switch-to-login">Sign in</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const tabBtnLogin = document.getElementById('tab-btn-login');
+      const tabBtnSignup = document.getElementById('tab-btn-signup');
+      const loginForm = document.getElementById('login-form');
+      const signupForm = document.getElementById('signup-form');
+      const switchToSignup = document.getElementById('switch-to-signup');
+      const switchToLogin = document.getElementById('switch-to-login');
+
+      function showLogin() {
+        tabBtnLogin.classList.add('active');
+        tabBtnSignup.classList.remove('active');
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+        window.history.replaceState({}, '', '/login');
+      }
+
+      function showSignup() {
+        tabBtnSignup.classList.add('active');
+        tabBtnLogin.classList.remove('active');
+        signupForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+        window.history.replaceState({}, '', '/signup');
+      }
+
+      tabBtnLogin.addEventListener('click', showLogin);
+      tabBtnSignup.addEventListener('click', showSignup);
+      if (switchToSignup) switchToSignup.addEventListener('click', (e) => { e.preventDefault(); showSignup(); });
+      if (switchToLogin) switchToLogin.addEventListener('click', (e) => { e.preventDefault(); showLogin(); });
+
+      // Password Toggle
+      document.querySelectorAll('.btn-toggle-pwd').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const input = btn.previousElementSibling;
+          const icon = btn.querySelector('i');
+          if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'fa-regular fa-eye-slash';
+          } else {
+            input.type = 'password';
+            icon.className = 'fa-regular fa-eye';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>
