@@ -10,7 +10,7 @@ A sleek, production-ready Full-Stack URL Shortener with real-time click tracking
 ## ✨ Features
 
 - **Universal URL Shortening**: Supports any valid URL format (`google.com`, `https://...`, complex paths, subdomains).
-- **Custom Slugs**: Create personalized short links (e.g., `/my-portfolio`).
+- **Custom Slugs**: Create personalized short links (e.g. `/my-portfolio`).
 - **Duplicate Prevention**: Automatically detects existing links and returns the existing short URL.
 - **User Authentication**: Secure Sign Up & Sign In with password hashing (`bcryptjs`) and JWT cookie sessions.
 - **Real-Time Analytics**: Tracks total clicks with timestamp, IP, and user-agent logging.
