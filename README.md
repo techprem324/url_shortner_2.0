@@ -2,7 +2,8 @@
 
 A sleek, production-ready Full-Stack URL Shortener with real-time click tracking, custom aliases, QR code generation, and secure user authentication.
 
-🌐 **Local Live URL**: [http://localhost:3001](http://localhost:3001)
+🚀 **Live Worldwide**: [https://url-shortner-1-0.onrender.com](https://url-shortner-1-0.onrender.com)  
+💻 **Local Development**: [http://localhost:3001](http://localhost:3001)
 
 ---
 
