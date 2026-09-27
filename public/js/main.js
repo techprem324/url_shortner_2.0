@@ -218,35 +218,119 @@ document.addEventListener('DOMContentLoaded', () => {
   // Result QR Button
   if (resultQrBtn) {
     resultQrBtn.addEventListener('click', () => {
-      const url = resultQrBtn.getAttribute('data-url') || resultShortUrl.value;
+      const url = resultQrBtn.getAttribute('data-url') || (resultShortUrl ? resultShortUrl.value : '');
       const id = resultQrBtn.getAttribute('data-id') || '';
       openQrModal(url, id);
     });
   }
 
   /* ===================================================================
-     QR Code Modal
+     QR Code Modal & Reliable PNG Downloader
      =================================================================== */
+  let currentModalShortId = '';
+  let currentModalUrl = '';
+
   function openQrModal(url, shortId = '') {
     if (!url || !qrModal || !qrcodeContainer) return;
-    qrcodeContainer.innerHTML = '';
-    if (qrTargetUrl) qrTargetUrl.textContent = url;
 
-    try {
-      new QRCode(qrcodeContainer, {
-        text: url,
-        width: 160,
-        height: 160,
-        colorDark: '#080c14',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.H,
-      });
-
-      qrModal.classList.remove('hidden');
-    } catch (err) {
-      console.error('QR generation error:', err);
-      showToast('Could not generate QR code.', 'error');
+    // Resolve full absolute URL for camera scanning
+    let fullUrl = url.trim();
+    if (!/^https?:\/\//i.test(fullUrl)) {
+      fullUrl = `${window.location.origin}${fullUrl.startsWith('/') ? '' : '/'}${fullUrl}`;
     }
+
+    // Resolve shortId slug
+    let targetShortId = shortId ? shortId.trim() : '';
+    if (!targetShortId) {
+      try {
+        const parsed = new URL(fullUrl);
+        const segments = parsed.pathname.split('/').filter(Boolean);
+        targetShortId = segments[segments.length - 1] || '';
+      } catch (e) {
+        targetShortId = '';
+      }
+    }
+
+    currentModalShortId = targetShortId;
+    currentModalUrl = fullUrl;
+
+    if (qrTargetUrl) {
+      qrTargetUrl.textContent = fullUrl;
+      qrTargetUrl.title = fullUrl;
+    }
+
+    const qrVisitDirectBtn = document.getElementById('qr-visit-direct-btn');
+    if (qrVisitDirectBtn) {
+      qrVisitDirectBtn.href = fullUrl;
+    }
+
+    const qrModalCopyBtn = document.getElementById('qr-modal-copy-btn');
+    if (qrModalCopyBtn) {
+      qrModalCopyBtn.onclick = () => copyToClipboard(fullUrl, qrModalCopyBtn);
+    }
+
+    qrcodeContainer.innerHTML = '';
+
+    // Render using official QRCode library or fallback
+    let rendered = false;
+
+    if (window.QRCode && typeof window.QRCode.toCanvas === 'function') {
+      try {
+        const canvas = document.createElement('canvas');
+        qrcodeContainer.appendChild(canvas);
+        window.QRCode.toCanvas(canvas, fullUrl, {
+          width: 220,
+          margin: 2,
+          color: {
+            dark: '#080C16',
+            light: '#FFFFFF',
+          },
+          errorCorrectionLevel: 'H',
+        }, (err) => {
+          if (err) {
+            console.warn('Canvas QR render error, using image fallback:', err);
+            renderQrImageFallback(targetShortId, fullUrl);
+          }
+        });
+        rendered = true;
+      } catch (err) {
+        console.warn('toCanvas failed, falling back:', err);
+      }
+    } else if (typeof window.QRCode === 'function') {
+      try {
+        new window.QRCode(qrcodeContainer, {
+          text: fullUrl,
+          width: 200,
+          height: 200,
+          colorDark: '#080C16',
+          colorLight: '#FFFFFF',
+          correctLevel: window.QRCode.CorrectLevel ? window.QRCode.CorrectLevel.H : 2,
+        });
+        rendered = true;
+      } catch (err) {
+        console.warn('new QRCode constructor failed:', err);
+      }
+    }
+
+    if (!rendered) {
+      renderQrImageFallback(targetShortId, fullUrl);
+    }
+
+    qrModal.classList.remove('hidden');
+  }
+
+  function renderQrImageFallback(shortId, fullUrl) {
+    if (!qrcodeContainer) return;
+    qrcodeContainer.innerHTML = '';
+    const img = document.createElement('img');
+    img.alt = 'QR Code';
+    img.className = 'qr-preview-img';
+    if (shortId) {
+      img.src = `/url/qr/${shortId}?t=${Date.now()}`;
+    } else {
+      img.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(fullUrl)}&margin=10`;
+    }
+    qrcodeContainer.appendChild(img);
   }
 
   function hideQrModal() {
@@ -261,26 +345,60 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  if (downloadQrBtn && qrcodeContainer) {
+  // Escape key closes modal
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && qrModal && !qrModal.classList.contains('hidden')) {
+      hideQrModal();
+    }
+  });
+
+  if (downloadQrBtn) {
     downloadQrBtn.addEventListener('click', () => {
-      const img = qrcodeContainer.querySelector('img');
-      const canvas = qrcodeContainer.querySelector('canvas');
-      let dataUrl = null;
-
-      if (img && img.src) dataUrl = img.src;
-      else if (canvas) dataUrl = canvas.toDataURL('image/png');
-
-      if (dataUrl) {
+      // 1. If we have a server-backed shortId, download the ultra crisp server PNG
+      if (currentModalShortId) {
         const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = `quicklink-qr-${Date.now()}.png`;
+        a.href = `/url/qr/download/${encodeURIComponent(currentModalShortId)}`;
+        a.download = `quicklink-${currentModalShortId}-qr.png`;
         document.body.appendChild(a);
         a.click();
         a.remove();
-        showToast('QR code downloaded!', 'success');
-      } else {
-        showToast('QR Image is still rendering.', 'error');
+        showToast('QR Code download started!', 'success');
+        return;
       }
+
+      // 2. Client Canvas fallback
+      const canvas = qrcodeContainer ? qrcodeContainer.querySelector('canvas') : null;
+      if (canvas) {
+        try {
+          const dataUrl = canvas.toDataURL('image/png');
+          const a = document.createElement('a');
+          a.href = dataUrl;
+          a.download = `quicklink-qr-${Date.now()}.png`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          showToast('QR Code downloaded!', 'success');
+          return;
+        } catch (e) {
+          console.warn('Canvas export failed:', e);
+        }
+      }
+
+      // 3. Img element fallback
+      const img = qrcodeContainer ? qrcodeContainer.querySelector('img') : null;
+      if (img && img.src) {
+        const a = document.createElement('a');
+        a.href = img.src;
+        a.download = `quicklink-qr-${Date.now()}.png`;
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        showToast('QR Code image opened for download!', 'success');
+        return;
+      }
+
+      showToast('Preparing QR image, please retry in a second.', 'info');
     });
   }
 

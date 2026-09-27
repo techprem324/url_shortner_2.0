@@ -7,7 +7,9 @@ const router = express.Router();
 // Home Dashboard View
 router.get('/', async (req, res) => {
   const isDbConnected = mongoose.connection.readyState === 1;
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const baseUrl = (process.env.BASE_URL && process.env.NODE_ENV === 'production' && !process.env.BASE_URL.includes('localhost'))
+    ? process.env.BASE_URL.replace(/\/$/, '')
+    : `${req.protocol}://${req.get('host')}`;
   const user = req.user || null;
 
   if (!isDbConnected) {

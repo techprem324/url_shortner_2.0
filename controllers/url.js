@@ -1,6 +1,17 @@
 const crypto = require('crypto');
 const mongoose = require('mongoose');
+const QRCode = require('qrcode');
 const UrlModel = require('../models/url');
+
+/**
+ * Helper to get clean, protocol-aware base URL
+ */
+function getBaseUrl(req) {
+  if (process.env.BASE_URL && process.env.NODE_ENV === 'production' && !process.env.BASE_URL.includes('localhost')) {
+    return process.env.BASE_URL.replace(/\/$/, '');
+  }
+  return `${req.protocol}://${req.get('host')}`;
+}
 
 /**
  * Generate a clean, URL-safe random string ID (e.g. "8f2a9c7")
@@ -371,10 +382,75 @@ async function handleDeleteURL(req, res) {
   }
 }
 
+/**
+ * GET /url/qr/:shortId
+ * Stream QR Code PNG image
+ */
+async function handleGetQRCode(req, res) {
+  try {
+    const { shortId } = req.params;
+    const entry = await UrlModel.findOne({ shortId });
+    if (!entry) {
+      return res.status(404).json({ success: false, error: 'Short URL not found.' });
+    }
+    const baseUrl = getBaseUrl(req);
+    const targetUrl = `${baseUrl}/${shortId}`;
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    await QRCode.toFileStream(res, targetUrl, {
+      width: 400,
+      margin: 2,
+      color: {
+        dark: '#070A12',
+        light: '#FFFFFF',
+      },
+      errorCorrectionLevel: 'H',
+    });
+  } catch (error) {
+    console.error('QR code generation error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to generate QR code.' });
+  }
+}
+
+/**
+ * GET /url/qr/download/:shortId
+ * Trigger attachment download of QR Code PNG
+ */
+async function handleDownloadQRCode(req, res) {
+  try {
+    const { shortId } = req.params;
+    const entry = await UrlModel.findOne({ shortId });
+    if (!entry) {
+      return res.status(404).json({ success: false, error: 'Short URL not found.' });
+    }
+    const baseUrl = getBaseUrl(req);
+    const targetUrl = `${baseUrl}/${shortId}`;
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Disposition', `attachment; filename="quicklink-${shortId}-qr.png"`);
+    await QRCode.toFileStream(res, targetUrl, {
+      width: 600,
+      margin: 3,
+      color: {
+        dark: '#070A12',
+        light: '#FFFFFF',
+      },
+      errorCorrectionLevel: 'H',
+    });
+  } catch (error) {
+    console.error('QR code download error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to download QR code.' });
+  }
+}
+
 module.exports = {
   handleGenerateNewShortURL,
   handleGetAnalytics,
   handleGetAllUrls,
   handleDeleteURL,
+  handleGetQRCode,
+  handleDownloadQRCode,
   validateAndNormalizeUrl,
+  getBaseUrl,
 };

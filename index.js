@@ -11,6 +11,7 @@ const userRoute = require('./routes/user');
 const URL = require('./models/url');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3001;
 const MONGODB_URI = process.env.MONGODB_URI;
 

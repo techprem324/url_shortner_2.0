@@ -8,20 +8,23 @@
   <!-- Modern Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   
   <!-- FontAwesome 6 -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   
-  <!-- QR Code Generator -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- Official QR Code Generator -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
   <!-- Production CSS -->
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <!-- Ambient background subtle gradient mesh -->
+  <!-- Ambient background subtle gradient mesh & lightning aura -->
   <div class="ambient-glow"></div>
+  <div class="lightning-orb orb-1"></div>
+  <div class="lightning-orb orb-2"></div>
+  <div class="grid-overlay"></div>
 
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
@@ -35,19 +38,6 @@
       </a>
 
       <div class="nav-right">
-        <!-- DB Status -->
-        <% if (typeof isDbConnected !== 'undefined' && isDbConnected) { %>
-          <div class="db-status status-connected" title="Connected to MongoDB Atlas">
-            <span class="dot"></span> MongoDB Online
-          </div>
-        <% } else { %>
-          <div class="db-status status-offline" title="Connecting to MongoDB...">
-            <span class="dot-amber"></span> Database Connecting
-          </div>
-        <% } %>
-
-        <div class="nav-divider"></div>
-
         <!-- User State -->
         <% if (typeof user !== 'undefined' && user) { %>
           <div class="user-profile-menu">
@@ -307,21 +297,44 @@
   </main>
 
   <!-- QR Code Modal -->
-  <div id="qr-modal" class="modal-overlay hidden">
+  <div id="qr-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="qr-modal-title">
     <div class="modal-card">
       <div class="modal-top">
-        <h3 class="modal-heading"><i class="fa-solid fa-qrcode"></i> QR Code</h3>
-        <button id="close-qr-modal" class="modal-btn-close"><i class="fa-solid fa-xmark"></i></button>
+        <div class="modal-heading-group">
+          <span class="modal-icon-badge"><i class="fa-solid fa-qrcode"></i></span>
+          <h3 id="qr-modal-title" class="modal-heading">Short URL QR Code</h3>
+        </div>
+        <button id="close-qr-modal" class="modal-btn-close" aria-label="Close modal"><i class="fa-solid fa-xmark"></i></button>
       </div>
+
       <div class="modal-content">
-        <div id="qrcode-container" class="qr-canvas-holder"></div>
-        <p id="qr-target-url" class="qr-url-caption"></p>
+        <div class="qr-scan-badge">
+          <i class="fa-solid fa-camera"></i>
+          <span>Scan with phone camera or download PNG</span>
+        </div>
+
+        <div class="qr-glow-frame">
+          <div id="qrcode-container" class="qr-canvas-holder"></div>
+        </div>
+
+        <div class="qr-link-preview-box">
+          <div class="qr-link-row">
+            <span id="qr-target-url" class="qr-url-caption"></span>
+            <button type="button" id="qr-modal-copy-btn" class="btn-qr-copy" title="Copy URL">
+              <i class="fa-regular fa-copy"></i>
+            </button>
+          </div>
+        </div>
       </div>
+
       <div class="modal-actions">
+        <a id="qr-visit-direct-btn" href="#" target="_blank" class="btn btn-outline btn-sm">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> Visit
+        </a>
         <button id="download-qr-btn" class="btn btn-primary-solid btn-sm">
           <i class="fa-solid fa-download"></i> Download PNG
         </button>
-        <button id="close-qr-btn" class="btn btn-outline btn-sm">Close</button>
+        <button id="close-qr-btn" class="btn btn-ghost btn-sm">Close</button>
       </div>
     </div>
   </div>
